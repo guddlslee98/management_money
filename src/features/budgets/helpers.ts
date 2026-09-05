@@ -1,7 +1,6 @@
 import type { Budget, Category } from '../../db/types'
 import { BUDGET_DEFAULT_MONTH, type BudgetUsage } from '../../domain/budget'
 import type { MonthKey } from '../../domain/dates'
-import { formatNumber } from '../../domain/money'
 import type { CategoryShare } from '../../domain/summary'
 
 /** 예산 편집 범위: 기본(매월) 예산 또는 이번 달 전용 예산 */

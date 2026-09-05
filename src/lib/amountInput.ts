@@ -1,4 +1,4 @@
-import { formatNumber, parseAmount } from '../domain/money'
+import { formatNumber } from '../domain/money'
 
 /** 예산·반복·계좌 폼에서 쓰는 금액 입력 헬퍼 (정수 원, 천단위 구분자) */
 export function parseAmountInput(input: string, allowNegative = false): number | null {
