@@ -8,6 +8,8 @@ export function bootstrap(): Promise<void> {
   if (!started) {
     started = (async () => {
       await repos.ensureSeeded({ categories: DEFAULT_CATEGORIES, rules: DEFAULT_RULES })
+      // 브라우저가 저장 공간 압박 시 IndexedDB를 지우지 않도록 영구 저장을 요청 (지원 브라우저만)
+      navigator.storage?.persist?.().catch(() => undefined)
       await repos.recurring.generateDue()
     })().catch((e) => {
       console.error('bootstrap failed', e)
