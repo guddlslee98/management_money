@@ -26,13 +26,17 @@ src/
   db/db.ts           Dexie 스키마 v1
   db/repo.ts         저장소 계층: 검증(ValidationError), CRUD, 시딩, 반복거래 생성, 백업 dump/restore
   domain/            순수 계산 로직 (부수효과 없음, 단위 테스트 필수)
-    money.ts dates.ts summary.ts classify.ts recurring.ts budget.ts accounts.ts import/hash.ts
+    money.ts dates.ts summary.ts classify.ts recurring.ts budget.ts accounts.ts
+    import/            파일 가져오기: parse.ts(인코딩·xlsx·HTML표) profiles.ts(출처별 컬럼 매핑) categoryMap.ts dedupe.ts hash.ts, __fixtures__/
   data/default-categories.ts  기본 카테고리(대분류/소분류)와 자동분류 규칙
-  hooks/data.ts      useLiveQuery 래퍼 (useCategories, useMonthTransactions, ...)  hooks/useMonth.ts (?m=YYYY-MM)
-  components/ui/     Button Card Field(Input/Select/Textarea/Field) Sheet PageHeader Money MonthPicker Segmented ProgressBar CategoryBadge EmptyState
+  hooks/data.ts      useLiveQuery 래퍼 (useCategories, useMonthTransactions, useAllTransactions, useRecentPayees ...)  hooks/useMonth.ts (?m=YYYY-MM)
+  lib/               theme.ts(라이트/다크) cn.ts amountInput.ts(폼 금액 입력 헬퍼)
+  components/ui/     Button Card Field(Input/Select/Textarea/Field) Sheet ChoiceSheet PageHeader Money MonthPicker Segmented ProgressBar CategoryBadge EmptyState
+  components/pickers/  AmountInput CategoryPicker AccountPicker (거래 폼 등에서 재사용)
+  components/charts/   Recharts 3 래퍼: DonutChart MonthlyBarChart TrendLine CategoryBarChart HBarList (테마 CSS 변수 사용)
   components/layout/AppLayout.tsx  하단 탭(홈/거래/리포트/예산/더보기) + Page 컨테이너
   features/<기능>/    화면 단위 코드 (home, transactions, reports, budgets, more, accounts, categories, recurring, import, backup, settings)
-  app/bootstrap.ts   시작 시 시딩 + 반복거래 생성
+  app/bootstrap.ts   시작 시 시딩 + 반복거래 생성 + 영구 저장 요청 / app/autoBackup.ts 동기화 폴더 자동 백업 / app/pwa.tsx 업데이트·설치 안내 / app/sampleData.ts 샘플 데이터
 ```
 
 ## 도메인 규칙 (반드시 지킬 것)
@@ -42,7 +46,8 @@ src/
 - 카테고리는 2단계(대분류 `parentId: null` / 소분류). 리포트 비율은 대분류 기준, 소분류는 드릴다운. `categoryId: null` → 미분류(`UNCATEGORIZED`).
 - 월 요약은 `summarizeMonth`, 추세는 `monthlyTrend`, 예산은 `budgetUsage`, 잔액은 `accountBalances`를 사용 — 화면에서 직접 합산하지 말 것.
 - DB 접근은 `db/repo.ts`를 통해서만. 화면에서는 `hooks/data.ts`의 `useLiveQuery` 훅 사용.
-- 가져오기 중복 감지는 `importHash` (`domain/import/hash.ts`).
+- 가져오기 중복 감지는 `importHash` (`domain/import/hash.ts`). 새 출처 파일 형식은 `domain/import/profiles.ts`에 프로필로 추가하고 `__fixtures__`에 샘플과 테스트를 함께 둔다.
+- 무거운 화면(리포트·가져오기·백업 등)은 `App.tsx`에서 `lazy()`로 지연 로딩한다. 가져오기 파서(`parse.ts`, SheetJS 포함)는 동적 import로 분리한다.
 
 ## UI 컨벤션
 - 모바일 우선, 한국어 UI, 본문 폭 `max-w-lg`. 페이지는 `<PageHeader/>` + `<Page/>`. 폼/선택은 `<Sheet/>`(바텀시트).
