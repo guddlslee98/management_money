@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 e2e-artifacts/
+
+# Claude Code agent worktrees (harness-managed)
+.claude/worktrees/
