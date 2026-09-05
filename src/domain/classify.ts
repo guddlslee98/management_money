@@ -44,12 +44,15 @@ export function createClassifier(rules: ClassifyRule[]): Classifier {
       .map(normalizeText)
       .join(' ')
     if (!hay) return null
+    // 우선순위가 높은 규칙이 이기고, 같은 우선순위면 실제로 매칭된 키워드가 더 긴(구체적인) 규칙이 이긴다.
+    let best: { categoryId: string; rule: ClassifyRule; len: number } | null = null
     for (const c of compiled) {
+      if (best && c.rule.priority < best.rule.priority) break // priority 내림차순 정렬이므로 더 볼 필요 없음
       for (const k of c.keywords) {
-        if (hay.includes(k)) return { categoryId: c.rule.categoryId, rule: c.rule }
+        if (k.length > (best?.len ?? 0) && hay.includes(k)) best = { categoryId: c.rule.categoryId, rule: c.rule, len: k.length }
       }
     }
-    return null
+    return best ? { categoryId: best.categoryId, rule: best.rule } : null
   }
   return { match, classify: (...texts) => match(...texts)?.categoryId ?? null }
 }

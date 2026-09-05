@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createClassifier } from '../domain/classify'
 import { DEFAULT_CATEGORIES, DEFAULT_RULES } from './default-categories'
 
 const ids = new Set(DEFAULT_CATEGORIES.map((c) => c.id))
@@ -85,25 +86,14 @@ describe('DEFAULT_RULES', () => {
     }
   })
 
-  it('no keyword is shadowed by a higher-priority rule of a different category', () => {
-    // 분류기는 공백 제거 + 소문자 비교 후 부분 문자열 매칭을 하므로, 어떤 키워드 k가
-    // 다른 규칙의 키워드를 포함(substring)하면 그 규칙도 함께 매칭된다.
-    // 그런 경우 k를 가진 규칙의 우선순위가 반드시 가장 높아야 의도한 분류가 된다.
-    const rules = DEFAULT_RULES.map((r) => ({
-      ...r,
-      keywords: r.pattern.toLowerCase().split('|'),
-    }))
-    for (const r of rules) {
-      for (const kw of r.keywords) {
-        let best = r
-        for (const o of rules) {
-          if (o === r) continue
-          if (o.keywords.some((ok) => kw.includes(ok)) && o.priority >= best.priority) best = o
-        }
-        expect(
-          best.categoryId,
-          `keyword "${kw}" (${r.categoryId}, p=${r.priority}) is shadowed by "${best.pattern}" (${best.categoryId}, p=${best.priority})`,
-        ).toBe(r.categoryId)
+  it('every keyword classifies to its own category with the real classifier (longest match wins)', () => {
+    const clf = createClassifier(
+      DEFAULT_RULES.map((r, i) => ({ id: `d${i}`, pattern: r.pattern, categoryId: r.categoryId, priority: r.priority, source: 'default' as const, createdAt: 0 })),
+    )
+    for (const r of DEFAULT_RULES) {
+      for (const kw of r.pattern.split('|')) {
+        const got = clf.match(kw)
+        expect(got?.categoryId, `keyword "${kw}" (${r.categoryId}, p=${r.priority}) classified as ${got?.categoryId} via "${got?.rule.pattern}"`).toBe(r.categoryId)
       }
     }
   })
