@@ -19,9 +19,14 @@ export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputEleme
 
 export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select className={cn(base, 'appearance-none pr-8 bg-no-repeat bg-[right_0.75rem_center]', className)} {...rest}>
-      {children}
-    </select>
+    <span className="relative block">
+      <select className={cn(base, 'appearance-none pr-9', className)} {...rest}>
+        {children}
+      </select>
+      <span aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted text-xs">
+        ▼
+      </span>
+    </span>
   )
 }
 
