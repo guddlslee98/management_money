@@ -34,6 +34,10 @@ export default defineConfig({
       },
     }),
   ],
+  // 동적 import 로 뒤늦게 발견되는 의존성을 서버 시작 시 미리 번들해 dev 중 전체 새로고침을 막는다
+  optimizeDeps: {
+    include: ['xlsx', 'papaparse', 'recharts', 'dexie', 'dexie-react-hooks', 'date-fns', 'react-router'],
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

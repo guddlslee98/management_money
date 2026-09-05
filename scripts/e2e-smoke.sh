@@ -149,4 +149,41 @@ expect_text "총 예산" "예산 요약 카드 렌더링"
 agent-browser screenshot "$OUT/07-budgets.png"
 echo "8) 페이지 JS 오류 재확인"
 if agent-browser errors --json | grep -qF '"errors":[]'; then ok "페이지 JS 오류 없음 (전체 시나리오)"; else agent-browser errors > "$OUT/errors.log"; fail "페이지 JS 오류 발생 ($OUT/errors.log)"; fi
+echo "9) 파일 가져오기 (토스 CSV 픽스처 → 감지 → 매핑 → 미리보기 → 저장)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+count_tx() { agent-browser eval --stdin <<'JS' | tr -dc '0-9'
+(async () => await __mm.repos.transactions.count())()
+JS
+}
+BEFORE="$(count_tx)"
+agent-browser open "$BASE/more/import"
+agent-browser wait --text "파일 가져오기"
+agent-browser upload 'input[type="file"]' "$ROOT/src/domain/import/__fixtures__/toss.csv"
+agent-browser wait --text "감지된 출처"
+expect_text "토스" "토스 CSV 출처 자동 감지"
+agent-browser find role button click --name "다음: 열 매핑"
+agent-browser wait --text "다음: 미리보기"
+agent-browser screenshot "$OUT/08-import-mapping.png"
+agent-browser find role button click --name "다음: 미리보기"
+agent-browser wait --text "건 가져오기"
+expect_text "스타벅스 강남점" "미리보기에 파일의 거래 표시"
+if agent-browser get text body | grep -qE "카페|커피"; then ok "키워드 규칙으로 카테고리 자동 분류(스타벅스 → 카페)"; else fail "가져오기 미리보기에서 자동 분류가 되지 않음"; fi
+agent-browser screenshot "$OUT/09-import-preview.png"
+agent-browser find role button click --name "건 가져오기"
+agent-browser wait --text "다른 파일 가져오기"
+AFTER="$(count_tx)"
+if [ "${AFTER:-0}" -gt "${BEFORE:-0}" ]; then ok "가져오기로 거래 $((AFTER - BEFORE))건 추가 (${BEFORE} → ${AFTER})"; else fail "가져오기 후 거래 수가 늘지 않음 (${BEFORE} → ${AFTER})"; fi
+agent-browser screenshot "$OUT/10-import-done.png"
+echo "10) 같은 파일 재업로드 시 중복 감지"
+agent-browser find role button click --name "다른 파일 가져오기"
+agent-browser wait --text "파일 선택"
+agent-browser upload 'input[type="file"]' "$ROOT/src/domain/import/__fixtures__/toss.csv"
+agent-browser wait --text "감지된 출처"
+agent-browser find role button click --name "다음: 열 매핑"
+agent-browser wait --text "다음: 미리보기"
+agent-browser find role button click --name "다음: 미리보기"
+agent-browser wait --text "중복"
+# 요약 타일은 "중복" 과 건수가 다른 줄에 있으므로 본문을 한 줄로 합쳐 검사한다
+if agent-browser get text body | tr "\n" " " | grep -qE "중복 +[1-9][0-9]* +기본 제외"; then ok "재업로드 시 중복 거래 감지"; else fail "중복 거래가 감지되지 않음"; fi
+agent-browser screenshot "$OUT/11-import-duplicates.png"
 echo "스모크 테스트 통과 ($PASS 검사) — 산출물: $OUT/"
