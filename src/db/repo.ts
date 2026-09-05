@@ -415,7 +415,10 @@ export function makeRepos(d: MoneyDB) {
     if (data.app !== 'management-money' || !Array.isArray(data.transactions)) throw new ValidationError('백업 파일 형식이 아닙니다')
     const tables = [d.transactions, d.categories, d.accounts, d.budgets, d.recurringRules, d.classifyRules, d.settings]
     await d.transaction('rw', tables, async () => {
+      // 자동 백업 폴더 핸들은 기기 고유 설정이므로 덮어쓰기 복원에서도 유지한다
+      const dirHandle = await d.settings.get('backup.dirHandle')
       if (mode === 'replace') for (const t of tables) await t.clear()
+      if (dirHandle) await d.settings.put(dirHandle)
       await d.categories.bulkPut(data.categories ?? [])
       await d.accounts.bulkPut(data.accounts ?? [])
       await d.transactions.bulkPut(data.transactions ?? [])
