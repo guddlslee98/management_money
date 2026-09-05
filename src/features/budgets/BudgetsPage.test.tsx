@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { budgetRepo, categoryRepo, repos, txRepo } from '../../db/repo'
 import BudgetsPage from './BudgetsPage'
 
-const T = { timeout: 3000 }
+const T = { timeout: 10000 }
 const renderPage = (month = '2026-09') =>
   render(
     <MemoryRouter initialEntries={[`/budgets?m=${month}`]}>

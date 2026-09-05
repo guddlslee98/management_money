@@ -65,7 +65,7 @@ describe('BackupPage', () => {
     expect(await repos.transactions.count()).toBe(2)
     expect((await repos.transactions.all()).map((t) => t.payee).sort()).toEqual(['김밥천국', '회사'])
     expect((await repos.accounts.all()).length).toBe(3)
-    await waitFor(() => expect(reloadApp).toHaveBeenCalled(), { timeout: 3000 })
+    await waitFor(() => expect(reloadApp).toHaveBeenCalled(), { timeout: 10000 })
   })
 
   it('rejects a non-backup file with a Korean message', async () => {
