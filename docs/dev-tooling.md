@@ -204,7 +204,7 @@ agent-browser close
 1. `agent-browser session id --scope worktree --prefix smoke`로 작업 트리별 세션 이름을 만들어 `AGENT_BROWSER_SESSION`에 넣는다(다른 브라우저 세션과 격리).
 2. `AGENT_BROWSER_PROXY_BYPASS=localhost,127.0.0.1`을 기본으로 둬 프록시 환경에서도 localhost로 직접 접속한다.
 3. `npx vite --port $PORT --strictPort`로 dev 서버를 띄우고(`e2e-artifacts/vite.log`), 최대 30초 동안 `curl`로 준비를 기다린다. 안 뜨면 실패로 종료.
-4. `agent-browser open` → `wait --load networkidle` → `get text body`에 **"가계부"** 가 있는지 확인 → `screenshot e2e-artifacts/home.png`.
+4. `agent-browser open` → `wait --load networkidle` → `wait --text "이번 달"` → 본문에 **"이번 달"/"더보기"** 가 있는지 확인 → `find role link click --name "더보기"`(탭은 아이콘+라벨이라 `find text`로는 못 찾음) → `eval --stdin`으로 `window.__mm.seedSample()` 시딩 → `errors --json`으로 페이지 JS 오류 없음 확인 → 단계별 스크린샷(`e2e-artifacts/01-home.png` …).
 5. `trap`으로 종료 시 `agent-browser close`와 vite 프로세스를 정리한다.
 
 ```bash
@@ -235,7 +235,7 @@ PORT=5180 OUT=/tmp/smoke npm run e2e:smoke
 - Chromium 바이너리는 별도 설치(`agent-browser install`)가 필요하다. `agent-browser doctor`로 상태를 확인한다.
 - 스냅샷의 `@eN` ref는 페이지가 바뀌는 순간 무효가 된다. 클릭/제출 후에는 다시 `snapshot`.
 - 데몬은 명령이 1시간 없으면 자동 종료된다(`--idle-timeout`으로 조정). 작업이 끝나면 `agent-browser close`.
-- 스모크 테스트는 현재 스캐폴드의 `<h1>가계부</h1>`(`src/App.tsx`)에 의존한다. 홈 화면 문구가 바뀌면 `expect_text`도 갱신해야 한다.
+- 스모크 테스트는 홈 헤더 "이번 달", 하단 탭 "더보기", 더보기 메뉴 "계좌 관리" 문구에 의존한다. 화면 문구가 바뀌면 `expect_text`도 갱신해야 한다.
 - `--strictPort`라 5173이 사용 중이면 즉시 실패한다. `PORT=…`로 바꿔 실행한다.
 
 ---
