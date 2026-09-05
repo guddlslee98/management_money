@@ -57,3 +57,13 @@ export function useSetting<T>(key: string, fallback: T): T {
 export function useTransactionCount(): number {
   return useLiveQuery(() => txRepo.count(), [], 0)
 }
+
+/** 전체 거래 (계좌 잔액·순자산 계산용). undefined = 로딩 중 */
+export function useAllTransactions(): Transaction[] | undefined {
+  return useLiveQuery(() => txRepo.all(), [])
+}
+
+/** 최근 사용 거래처 (자동완성용) */
+export function useRecentPayees(limit = 30): string[] {
+  return useLiveQuery(() => txRepo.recentPayees(limit), [limit], EMPTY as string[])
+}

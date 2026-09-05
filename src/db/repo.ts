@@ -179,7 +179,9 @@ export function makeRepos(d: MoneyDB) {
         if (parent.parentId) throw new ValidationError('소분류 아래에는 카테고리를 만들 수 없습니다')
         if (parent.kind !== input.kind) throw new ValidationError('상위 카테고리와 종류가 다릅니다')
       }
-      const siblings = await d.categories.where('[kind+parentId]').equals([input.kind, input.parentId ?? '']).count()
+      // IndexedDB는 null을 인덱스 키로 쓰지 못하므로 복합 인덱스 대신 filter로 형제 수를 센다
+      const parentId = input.parentId ?? null
+      const siblings = await d.categories.filter((c) => c.kind === input.kind && c.parentId === parentId).count()
       const cat: Category = {
         id: input.id ?? newId(),
         kind: input.kind,

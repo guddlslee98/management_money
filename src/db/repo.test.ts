@@ -85,6 +85,16 @@ describe('categories', () => {
     expect(await r.budgets.all()).toEqual([])
     expect(await r.classifyRules.all()).toEqual([])
   })
+
+  it('assigns increasing sortOrder to new top-level categories', async () => {
+    const a = await r.categories.add({ kind: 'expense', name: 'A', emoji: '', color: '', parentId: null })
+    const b = await r.categories.add({ kind: 'expense', name: 'B', emoji: '', color: '', parentId: null })
+    expect(b.sortOrder).toBe(a.sortOrder + 1)
+    const s1 = await r.categories.add({ kind: 'expense', name: 'S1', emoji: '', color: '', parentId: a.id })
+    const s2 = await r.categories.add({ kind: 'expense', name: 'S2', emoji: '', color: '', parentId: a.id })
+    expect(s1.sortOrder).toBe(0)
+    expect(s2.sortOrder).toBe(1)
+  })
 })
 
 describe('accounts', () => {
