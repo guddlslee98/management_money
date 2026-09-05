@@ -22,6 +22,8 @@ export interface PreviewStepProps {
   accountId: string | null
   counterAccountId: string | null
   importing: boolean
+  /** 기존 거래와의 중복 조회가 끝났는지 */
+  hashesReady: boolean
   onToggle: (rowIndex: number) => void
   onSelectAll: (mode: 'all' | 'none' | 'withDuplicates') => void
   onSetCategory: (rowIndex: number, categoryId: string | null, always: boolean) => void
@@ -162,8 +164,8 @@ export function PreviewStep(p: PreviewStepProps) {
         <Button variant="secondary" onClick={p.onBack} disabled={p.importing} aria-label="이전 단계">
           이전
         </Button>
-        <Button className="flex-1" size="lg" onClick={p.onImport} disabled={p.importing || p.selected.size === 0}>
-          {p.importing ? '가져오는 중…' : `${p.selected.size.toLocaleString('ko-KR')}건 가져오기`}
+        <Button className="flex-1" size="lg" onClick={p.onImport} disabled={p.importing || !p.hashesReady || p.selected.size === 0}>
+          {p.importing ? '가져오는 중…' : !p.hashesReady ? '중복 확인 중…' : `${p.selected.size.toLocaleString('ko-KR')}건 가져오기`}
         </Button>
       </div>
 

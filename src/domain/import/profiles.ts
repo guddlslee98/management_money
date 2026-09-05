@@ -201,13 +201,17 @@ export function guessMapping(headers: string[]): ColumnMapping {
   m.outflow = findColumn(headers, OUT_ALIASES, [balance])
   m.inflow = findColumn(headers, IN_ALIASES, [balance, m.outflow])
   m.amount = findColumn(headers, AMOUNT_ALIASES, [balance, m.outflow, m.inflow])
+  m.typeColumn = findColumn(headers, TYPE_ALIASES)
   if (m.outflow !== null && m.inflow !== null) {
     m.amountMode = 'split'
     m.amount = null
   } else {
     m.amountMode = 'single'
     if (m.amount === null) m.amount = m.outflow ?? m.inflow
-    if (m.amount !== null && m.amount === m.outflow) {
+    // 카드 명세서(승인금액/이용금액 + 가맹점명, 입출금·유형 열 없음)는 양수 금액이 전부 지출이다
+    const cardAmount = m.amount !== null && findColumn(headers, ['국내이용금액', '승인금액', '이용금액', '이용 금액', '사용금액']) === m.amount
+    const cardPayee = findColumn(headers, ['가맹점명', '이용가맹점', '이용하신곳', '사용처', '가맹점']) !== null
+    if (m.amount !== null && (m.amount === m.outflow || (m.typeColumn === null && m.inflow === null && (cardAmount || cardPayee)))) {
       m.negativeIsExpense = false
       m.cardDefaultsToExpense = true
     }
@@ -216,7 +220,6 @@ export function guessMapping(headers: string[]): ColumnMapping {
   }
   m.payee = findColumn(headers, PAYEE_ALIASES, [m.date, m.time, m.amount, m.outflow, m.inflow, balance])
   m.memo = findColumn(headers, MEMO_ALIASES, [m.payee, m.date, m.time, m.amount, m.outflow, m.inflow, balance])
-  m.typeColumn = findColumn(headers, TYPE_ALIASES)
   m.statusColumn = findColumn(headers, STATUS_ALIASES, [m.typeColumn, m.payee, m.memo])
   m.categoryMajor = findColumn(headers, ['대분류', '=분류', '카테고리', 'category'])
   m.categoryMinor = findColumn(headers, ['소분류', 'subcategory'])
@@ -446,7 +449,8 @@ export const PROFILES: ImportProfile[] = [
       bankSplitMapping(h, {
         date: col(h, ['거래일시', ...DATE_ALIASES]),
         payee: col(h, ['보낸분/받는분', '기재내용', '내통장표시', ...PAYEE_ALIASES]),
-        memo: col(h, ['=적요']),
+        // 하나은행식 헤더처럼 거래처가 '적요'에 잡히면 메모가 같은 열을 가리키지 않게 한다
+        memo: col(h, ['=적요'], [col(h, ['보낸분/받는분', '기재내용', '내통장표시', ...PAYEE_ALIASES])]),
         extraMemo: nums(col(h, ['송금메모'])),
         outflow: col(h, ['찾으신금액', '출금액', ...OUT_ALIASES]),
         inflow: col(h, ['맡기신금액', '입금액', ...IN_ALIASES]),
@@ -473,7 +477,7 @@ export const PROFILES: ImportProfile[] = [
         date: col(h, ['거래일자', '거래일시', ...DATE_ALIASES]),
         time: col(h, ['거래시간']),
         payee: col(h, ['=내용', ...PAYEE_ALIASES]),
-        memo: col(h, ['=적요']),
+        memo: col(h, ['=적요'], [col(h, ['=내용', ...PAYEE_ALIASES])]),
         outflow: col(h, ['출금액', '출금(원)', '=출금', ...OUT_ALIASES]),
         inflow: col(h, ['입금액', '입금(원)', '=입금', ...IN_ALIASES]),
         statusColumn: null,

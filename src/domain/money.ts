@@ -31,6 +31,13 @@ export function parseAmount(input: string | number | null | undefined): number |
   const s = input.trim()
   if (!s) return null
   const negative = /^\(.*\)$/.test(s) || /^-/.test(s) || /^−/.test(s)
+  // 엑셀이 CSV로 내보낸 지수 표기('1.2345E+6')는 숫자로 해석한다
+  if (/^[+\-−(]?\s*\d+(\.\d+)?[eE][+-]?\d+\s*\)?$/.test(s)) {
+    const n = Number(s.replace(/[()−\s+-]/g, ''))
+    return Number.isFinite(n) ? (negative ? -Math.round(n) : Math.round(n)) : null
+  }
+  // 통화 표기(원, KRW, ₩) 외의 영문자가 섞이면 금액으로 보지 않는다 (예: '1.2E+6x', 'N/A')
+  if (/[a-df-zA-DF-Z]/.test(s.replace(/krw/gi, ''))) return null
   const digits = s.replace(/[^0-9.]/g, '')
   if (!digits) return null
   // 천단위 구분자가 "."인 경우(1.234.567)도 허용: 소수점이 2개 이상이면 구분자로 간주

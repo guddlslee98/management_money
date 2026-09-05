@@ -24,6 +24,10 @@ describe('money', () => {
     expect(parseAmount('')).toBeNull()
     expect(parseAmount('abc')).toBeNull()
     expect(parseAmount(4200)).toBe(4200)
+    expect(parseAmount('1.2345E+6')).toBe(1234500)
+    expect(parseAmount('-1.5e3')).toBe(-1500)
+    expect(parseAmount('KRW 12,000')).toBe(12000)
+    expect(parseAmount('N/A')).toBeNull()
   })
 
   it('formats percentages', () => {

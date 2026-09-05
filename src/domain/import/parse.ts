@@ -60,7 +60,15 @@ export function decodeText(buf: ArrayBuffer): { text: string; encoding: Encoding
   try {
     return { text: new TextDecoder('utf-8', { fatal: true }).decode(bytes), encoding: 'utf-8' }
   } catch {
-    return { text: new TextDecoder('euc-kr').decode(bytes), encoding: 'euc-kr' }
+    // 잘못된 바이트 하나 때문에 파일 전체를 EUC-KR로 읽어 깨지지 않도록, 두 방식으로 읽어 치환 문자(U+FFFD)가 적은 쪽을 택한다
+    const utf8 = new TextDecoder('utf-8').decode(bytes)
+    const euckr = new TextDecoder('euc-kr').decode(bytes)
+    const bad = (t: string) => (t.match(/\uFFFD/g) ?? []).length
+    const hangul = (t: string) => (t.match(/[가-힣]/g) ?? []).length
+    const u = bad(utf8)
+    const e = bad(euckr)
+    if (u < e || (u === e && hangul(utf8) >= hangul(euckr))) return { text: utf8, encoding: 'utf-8' }
+    return { text: euckr, encoding: 'euc-kr' }
   }
 }
 
@@ -115,16 +123,27 @@ function sheetRows(ws: WorkSheet): string[][] {
   return aoa.map((r) => r.map(cellToString))
 }
 
+/** 거래 시트 점수: 헤더 행이 있고 날짜·금액 그룹을 모두 갖추면 높게, 같으면 행 수가 많은 쪽 */
+function sheetScore(rows: string[][]): number {
+  const h = detectHeaderRow(rows)
+  if (h < 0) return 0
+  const groups = headerGroupCount(rows[h])
+  const hasDate = rows[h].some((c) => HEADER_GROUPS[0].some((k) => normalizeHeader(c).includes(k)))
+  return groups * 10 + (hasDate ? 10 : 0)
+}
+
 function pickSheet(wb: WorkBook): { sheetName: string; rows: string[][] } {
-  let best: { sheetName: string; rows: string[][] } | null = null
+  let best: { sheetName: string; rows: string[][]; score: number } | null = null
   for (const name of wb.SheetNames) {
     const ws = wb.Sheets[name]
     if (!ws) continue
     const rows = sheetRows(ws).filter((r) => r.some((c) => c !== ''))
-    if (!best || rows.length > best.rows.length) best = { sheetName: name, rows }
+    const score = sheetScore(rows)
+    // 요약 시트('뱅샐현황', '해외이용내역' 등)보다 거래 헤더가 뚜렷한 시트를 고른다
+    if (!best || score > best.score || (score === best.score && rows.length > best.rows.length)) best = { sheetName: name, rows, score }
   }
   if (!best) throw new ImportFileError('empty', '시트가 없는 파일입니다')
-  return best
+  return { sheetName: best.sheetName, rows: best.rows }
 }
 
 function parseWorkbook(bytes: Uint8Array, kind: 'xlsx' | 'xls'): ParsedFile {
@@ -221,12 +240,16 @@ function headerGroupCount(row: string[]): number {
 /** 헤더 행 인덱스. 앞부분(계좌정보 등)을 건너뛴다. 없으면 -1 */
 export function detectHeaderRow(rows: string[][], maxScan = 40): number {
   const limit = Math.min(rows.length, maxScan)
-  for (const minCells of [3, 2]) {
-    for (let i = 0; i < limit; i++) {
-      const row = rows[i]
-      const filled = row.filter((c) => c.trim() !== '').length
-      if (filled < minCells) continue
-      if (headerGroupCount(row) >= 2) return i
+  const hasDate = (row: string[]) => row.some((c) => HEADER_GROUPS[0].some((k) => normalizeHeader(c).includes(k)))
+  // 1차: 날짜 열이 있는 헤더 행(조회 조건 행 '거래구분·입출금구분·정렬' 같은 머리말을 건너뛴다), 2차: 그룹 2개 이상
+  for (const requireDate of [true, false]) {
+    for (const minCells of [3, 2]) {
+      for (let i = 0; i < limit; i++) {
+        const row = rows[i]
+        const filled = row.filter((c) => c.trim() !== '').length
+        if (filled < minCells) continue
+        if (headerGroupCount(row) >= 2 && (!requireDate || hasDate(row))) return i
+      }
     }
   }
   return -1

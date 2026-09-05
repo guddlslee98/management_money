@@ -60,39 +60,58 @@ const ALIASES: Array<[string, string[]]> = [
 /** normalizeText + 가운뎃점 제거: '카페·간식' == '카페/간식' == '카페 간식' */
 const norm = (s: string) => normalizeText(s).replace(/[·ㆍ‧•]/g, '')
 
-/** 우리 카테고리 이름과 원본 이름을 비교해 id를 찾는다. 소분류 우선 → 대분류 → 포함 → 별칭 */
+/** '기타', '일반', 빈 값처럼 대분류를 그대로 쓰라는 뜻의 소분류 이름 */
+const GENERIC_MINORS = new Set(['기타', '일반', '기타지출', '기타수입', '미분류', 'etc', 'other', 'others'])
+
+/**
+ * 우리 카테고리 이름과 원본(뱅크샐러드·편한가계부) 이름을 비교해 id를 찾는다.
+ * 대분류를 먼저 확정(정확 → 포함 → 별칭)하고, 소분류는 그 대분류의 자식 안에서만 찾는다.
+ * '기타' 같은 일반 소분류나 빈 소분류는 대분류 자체를 쓴다.
+ */
 export function mapRawCategory(raw: { major?: string; minor?: string } | undefined, categories: Category[], kind: CategoryKind): string | null {
   if (!raw) return null
   const pool = categories.filter((c) => c.kind === kind && !c.isArchived)
   if (pool.length === 0) return null
-  const names = [raw.minor ?? '', raw.major ?? ''].map(norm).filter((n) => n.length > 0)
-  if (names.length === 0) return null
+  const major = norm(raw.major ?? '')
+  const minor = norm(raw.minor ?? '')
+  if (!major && !minor) return null
   const subs = pool.filter((c) => c.parentId !== null)
   const tops = pool.filter((c) => c.parentId === null)
 
   const exact = (n: string, list: Category[]) => list.find((c) => norm(c.name) === n)
-  for (const n of names) {
-    const hit = exact(n, subs) ?? exact(n, tops)
-    if (hit) return hit.id
-  }
   const contains = (n: string, list: Category[]) =>
     list.find((c) => {
       const cn = norm(c.name)
       return cn.length >= 2 && n.length >= 2 && (cn.includes(n) || n.includes(cn))
     })
-  for (const n of names) {
-    const hit = contains(n, subs) ?? contains(n, tops)
-    if (hit) return hit.id
-  }
-  for (const n of names) {
+  const viaAlias = (n: string, list: Category[]) => {
     for (const [key, candidates] of ALIASES) {
       if (!n.includes(norm(key))) continue
       for (const cand of candidates) {
         const cn = norm(cand)
-        const hit = exact(cn, subs) ?? exact(cn, tops) ?? contains(cn, subs) ?? contains(cn, tops)
-        if (hit) return hit.id
+        const hit = exact(cn, list) ?? contains(cn, list)
+        if (hit) return hit
       }
     }
+    return undefined
+  }
+  const resolve = (n: string, list: Category[]) => (n ? (exact(n, list) ?? contains(n, list) ?? viaAlias(n, list)) : undefined)
+
+  const top = resolve(major, tops)
+  if (top) {
+    if (!minor || GENERIC_MINORS.has(minor)) return top.id
+    const children = subs.filter((c) => c.parentId === top.id)
+    const child = resolve(minor, children)
+    return (child ?? top).id
+  }
+  // 대분류를 못 찾으면 소분류 이름으로 전체에서 시도 (일반 소분류는 제외), 마지막으로 대분류 이름을 소분류에서
+  if (minor && !GENERIC_MINORS.has(minor)) {
+    const hit = resolve(minor, subs) ?? resolve(minor, tops)
+    if (hit) return hit.id
+  }
+  if (major) {
+    const hit = resolve(major, subs)
+    if (hit) return hit.id
   }
   return null
 }
