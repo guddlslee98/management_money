@@ -6,7 +6,7 @@ import { APP_VERSION } from '../../app/version'
 import { Page } from '../../components/layout/AppLayout'
 import { Button, Card, CardTitle, Input, Label, PageHeader, Segmented, Sheet } from '../../components/ui'
 import { DEFAULT_RULES } from '../../data/default-categories'
-import { repos, ruleRepo, settingsRepo } from '../../db/repo'
+import { repos, ruleRepo } from '../../db/repo'
 import { getThemeMode, setThemeMode, type ThemeMode } from '../../lib/theme'
 import { reloadApp } from '../backup/browser'
 
@@ -38,8 +38,7 @@ export function ThemeCard() {
   const [mode, setMode] = useState<ThemeMode>(() => getThemeMode())
   const change = (m: ThemeMode) => {
     setMode(m)
-    setThemeMode(m)
-    void settingsRepo.set('theme', m)
+    setThemeMode(m) // 테마는 기기별 설정이라 localStorage 에만 저장한다 (백업에 포함하지 않음)
   }
   return (
     <Card>

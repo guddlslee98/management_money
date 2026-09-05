@@ -56,7 +56,7 @@ export default function ReportsPage() {
   const compare = useMemo(() => summarizeMonth(month, txs ?? [], categories, txs ?? []), [month, txs, categories])
 
   const expenseTops = useMemo(() => categories.filter((c) => c.kind === 'expense' && c.parentId === null && !c.isArchived), [categories])
-  const selectedCat = expenseTops.some((c) => c.id === pickedCat) ? pickedCat : (compare.byCategory.find((s) => catMap.has(s.categoryId))?.categoryId ?? expenseTops[0]?.id ?? '')
+  const selectedCat = expenseTops.some((c) => c.id === pickedCat) ? pickedCat : (compare.byCategory.find((s) => expenseTops.some((c) => c.id === s.categoryId))?.categoryId ?? expenseTops[0]?.id ?? '')
   const selectedCategory = catMap.get(selectedCat)
   const months = useMemo(() => trend.map((p) => p.month), [trend])
   const catTrend = useMemo(() => (selectedCat ? categoryTrend(months, txs ?? [], categories, selectedCat) : null), [months, txs, categories, selectedCat])

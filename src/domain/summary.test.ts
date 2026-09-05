@@ -25,6 +25,7 @@ function tx(p: Partial<Transaction> & Pick<Transaction, 'type' | 'date' | 'amoun
     source: 'manual',
     importHash: null,
     recurringRuleId: null,
+    recurringMonth: null,
     createdAt: 0,
     updatedAt: 0,
     ...p,
@@ -131,6 +132,8 @@ describe('summarizeMonth', () => {
     expect(food.amount).toBe(-20_000)
     expect(food.pct).toBe(0)
     expect(s.byCategory[0].categoryId).toBe('housing')
+    // 분모는 양수 합계(20,000)만 → 주거 100%, 다른 카테고리가 100%를 넘지 않는다
+    expect(s.byCategory[0].pct).toBe(1)
   })
 })
 

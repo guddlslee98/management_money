@@ -8,7 +8,8 @@ const acc = (id: string, initialBalance = 0, type: Account['type'] = 'bank'): Ac
 let n = 0
 const tx = (p: Partial<Transaction> & Pick<Transaction, 'type' | 'amount'>): Transaction => ({
   id: `t${++n}`, date: '2026-09-01', month: '2026-09', categoryId: null, accountId: null, toAccountId: null,
-  payee: '', memo: '', isRefund: false, source: 'manual', importHash: null, recurringRuleId: null, createdAt: 0, updatedAt: 0, ...p,
+  payee: '', memo: '', isRefund: false, source: 'manual', importHash: null, recurringRuleId: null,
+    recurringMonth: null, createdAt: 0, updatedAt: 0, ...p,
 })
 
 describe('accountBalances', () => {

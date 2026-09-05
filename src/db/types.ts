@@ -32,6 +32,8 @@ export interface Transaction {
   /** 파일 가져오기 중복 감지용 해시 */
   importHash: string | null
   recurringRuleId: string | null
+  /** 반복 거래가 생성된 발생 월(YYYY-MM). 날짜를 옮겨도 멱등 생성 기준으로 유지 */
+  recurringMonth: string | null
   createdAt: number
   updatedAt: number
 }

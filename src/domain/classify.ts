@@ -14,6 +14,14 @@ interface Compiled {
   maxLen: number
 }
 
+/** 'cu', 'kt', 'pub' 같은 짧은 영문 키워드는 다른 영단어의 일부(CULTURELAND, COCKTAIL, PUBG)에 걸리지 않도록 경계를 요구한다 */
+const SHORT_ASCII = /^[a-z0-9]{1,3}$/
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+function keywordMatches(hay: string, k: string): boolean {
+  if (!SHORT_ASCII.test(k)) return hay.includes(k)
+  return new RegExp(`(^|[^a-z0-9])${escapeRe(k)}([^a-z0-9]|$)`).test(hay)
+}
+
 function compile(rules: ClassifyRule[]): Compiled[] {
   const out: Compiled[] = []
   for (const rule of rules) {
@@ -49,7 +57,7 @@ export function createClassifier(rules: ClassifyRule[]): Classifier {
     for (const c of compiled) {
       if (best && c.rule.priority < best.rule.priority) break // priority 내림차순 정렬이므로 더 볼 필요 없음
       for (const k of c.keywords) {
-        if (k.length > (best?.len ?? 0) && hay.includes(k)) best = { categoryId: c.rule.categoryId, rule: c.rule, len: k.length }
+        if (k.length > (best?.len ?? 0) && keywordMatches(hay, k)) best = { categoryId: c.rule.categoryId, rule: c.rule, len: k.length }
       }
     }
     return best ? { categoryId: best.categoryId, rule: best.rule } : null

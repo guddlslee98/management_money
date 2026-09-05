@@ -44,6 +44,7 @@ export function buildRecurringTransaction(rule: RecurringRule, occ: Occurrence, 
     source: 'recurring',
     importHash: null,
     recurringRuleId: rule.id,
+    recurringMonth: occ.month,
     createdAt: now,
     updatedAt: now,
   }

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { Route, Routes } from 'react-router'
 import { startAutoBackup } from './app/autoBackup'
 import { bootstrap } from './app/bootstrap'
+import { ChunkErrorBoundary } from './app/ChunkErrorBoundary'
 import { PwaUpdatePrompt } from './app/pwa'
 import { AppLayout } from './components/layout/AppLayout'
 import BudgetsPage from './features/budgets/BudgetsPage'
@@ -27,7 +28,8 @@ export default function App() {
   return (
     <>
       <PwaUpdatePrompt />
-      <Suspense fallback={<div className="p-6 text-center text-sm text-muted">불러오는 중…</div>}>
+      <ChunkErrorBoundary>
+    <Suspense fallback={<div className="p-6 text-center text-sm text-muted">불러오는 중…</div>}>
     <Routes>
         <Route element={<AppLayout />}>
           <Route index element={<HomePage />} />
@@ -47,6 +49,7 @@ export default function App() {
         </Route>
       </Routes>
     </Suspense>
+    </ChunkErrorBoundary>
     </>
   )
 }

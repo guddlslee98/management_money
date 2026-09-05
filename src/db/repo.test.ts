@@ -136,10 +136,46 @@ describe('recurring', () => {
     expect(await r.transactions.count()).toBe(0)
   })
 
-  it('validates rules', async () => {
+  it('validates rules on add and update', async () => {
     const base = { type: 'expense' as const, amount: 1, categoryId: null, accountId: null, toAccountId: null, payee: '', memo: '', dayOfMonth: 1, startMonth: '2026-01', endMonth: null, isActive: true }
     await expect(r.recurring.add({ ...base, dayOfMonth: 32 })).rejects.toBeInstanceOf(ValidationError)
     await expect(r.recurring.add({ ...base, type: 'transfer', accountId: 'a', toAccountId: 'a' })).rejects.toBeInstanceOf(ValidationError)
+    await expect(r.recurring.add({ ...base, endMonth: '2025-12' })).rejects.toBeInstanceOf(ValidationError)
+    const rule = await r.recurring.add(base)
+    await expect(r.recurring.update(rule.id, { amount: -5 })).rejects.toBeInstanceOf(ValidationError)
+    await expect(r.recurring.update(rule.id, { type: 'transfer', accountId: 'a', toAccountId: 'a' })).rejects.toBeInstanceOf(ValidationError)
+  })
+
+  it('keeps idempotence by occurrence month even if a generated transaction is moved to another month', async () => {
+    const rule = await r.recurring.add({ type: 'expense', amount: 650_000, categoryId: 'food', accountId: 'acc.bank', toAccountId: null, payee: '월세', memo: '', dayOfMonth: 25, startMonth: '2026-08', endMonth: null, isActive: true })
+    expect(await r.recurring.generateDue('2026-08-26')).toBe(1)
+    const [aug] = await r.transactions.byRecurringRule(rule.id)
+    expect(aug.recurringMonth).toBe('2026-08')
+    await r.transactions.update(aug.id, { date: '2026-09-01' })
+    expect(await r.recurring.generateDue('2026-08-31')).toBe(0) // 8월분은 이미 있음(날짜만 9월로 옮김)
+    expect(await r.recurring.generateDue('2026-09-30')).toBe(1) // 9월분은 새로 생성
+    expect((await r.transactions.byRecurringRule(rule.id)).map((t) => t.recurringMonth).sort()).toEqual(['2026-08', '2026-09'])
+  })
+
+  it('resumes from the current month when a paused rule is re-enabled', async () => {
+    const rule = await r.recurring.add({ type: 'expense', amount: 10, categoryId: null, accountId: null, toAccountId: null, payee: '', memo: '', dayOfMonth: 1, startMonth: '2020-01', endMonth: null, isActive: false })
+    await r.recurring.update(rule.id, { isActive: true })
+    const updated = (await r.recurring.get(rule.id))!
+    expect(updated.startMonth >= '2026-01').toBe(true) // 꺼져 있던 기간을 소급 생성하지 않는다
+  })
+
+  it('deactivates transfer rules that lose an account and skips invalid rules in generateDue', async () => {
+    const rule = await r.recurring.add({ type: 'transfer', amount: 500_000, categoryId: null, accountId: 'acc.bank', toAccountId: 'acc.card', payee: '카드대금', memo: '', dayOfMonth: 27, startMonth: '2026-08', endMonth: null, isActive: true })
+    await r.accounts.remove('acc.card')
+    expect((await r.recurring.get(rule.id))?.isActive).toBe(false)
+    expect(await r.recurring.generateDue('2026-09-30')).toBe(0)
+    expect(await r.transactions.count()).toBe(0)
+  })
+
+  it('detaches deleted categories from recurring rules', async () => {
+    const rule = await r.recurring.add({ type: 'expense', amount: 10, categoryId: 'food.cafe', accountId: null, toAccountId: null, payee: '', memo: '', dayOfMonth: 1, startMonth: '2026-01', endMonth: null, isActive: true })
+    await r.categories.remove('food')
+    expect((await r.recurring.get(rule.id))?.categoryId).toBeNull()
   })
 })
 
@@ -166,6 +202,10 @@ describe('classify rules & settings & backup', () => {
     expect(await r.settings.get('theme', 'light')).toBe('dark')
     await r.restoreAll(dump, 'merge')
     expect(await r.transactions.count()).toBe(1)
+    // month 가 어긋난 백업 행도 date 기준으로 복구된다
+    const broken = { ...dump, transactions: dump.transactions.map((t) => ({ ...t, month: '1999-01' })) }
+    await r.restoreAll(broken, 'replace')
+    expect((await r.transactions.byMonth('2026-09')).length).toBe(1)
     await expect(r.restoreAll({ app: 'x' } as never, 'replace')).rejects.toBeInstanceOf(ValidationError)
   })
 })

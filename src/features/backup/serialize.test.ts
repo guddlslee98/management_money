@@ -18,6 +18,7 @@ const tx = (over: Partial<Transaction>): Transaction => ({
   source: 'manual',
   importHash: null,
   recurringRuleId: null,
+    recurringMonth: null,
   createdAt: 1,
   updatedAt: 1,
   ...over,

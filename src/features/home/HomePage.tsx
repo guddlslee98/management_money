@@ -79,7 +79,7 @@ function RecentRow({ tx, category }: { tx: Transaction; category: CategoryLike |
           <span className="block truncate text-sm">{title}</span>
           <span className="block truncate text-[11px] text-muted">
             {tx.type === 'transfer' ? '이체' : (category?.name ?? UNCATEGORIZED.name)}
-            {tx.isRefund && ' · 환불'}
+            {tx.isRefund && (tx.type === 'income' ? ' · 반환' : ' · 환불')}
           </span>
         </span>
         <span className="shrink-0 text-sm">{amount}</span>
@@ -99,7 +99,11 @@ export default function HomePage() {
   const [activeCat, setActiveCat] = useState<string | null>(null)
 
   const summary = useMemo(() => summarizeMonth(month, txs ?? [], categories, prevTxs ?? null), [month, txs, categories, prevTxs])
-  const usage = useMemo(() => budgetUsage(budgets, month, summary.byCategory).slice(0, 3), [budgets, month, summary])
+  const usage = useMemo(() => {
+    // 보관된 카테고리의 예산은 예산 화면에 행이 없으므로 여기서도 제외
+    const active = new Set(categories.filter((c) => c.kind === 'expense' && c.parentId === null && !c.isArchived).map((c) => c.id))
+    return budgetUsage(budgets.filter((b) => active.has(b.categoryId)), month, summary.byCategory).slice(0, 3)
+  }, [budgets, categories, month, summary])
   const donutData = useMemo<DonutSlice[]>(
     () =>
       summary.byCategory.map((s) => {
@@ -166,7 +170,7 @@ export default function HomePage() {
               <Card>
                 <div className="mb-2 flex items-center justify-between">
                   <CardTitle className="mb-0">예산</CardTitle>
-                  <Link to="/budgets" className="text-xs text-accent">
+                  <Link to={`/budgets?m=${month}`} className="text-xs text-accent">
                     전체 보기 ›
                   </Link>
                 </div>

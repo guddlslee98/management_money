@@ -10,7 +10,7 @@ import { useBudgets, useCategories, useTransactionsInMonths } from '../../hooks/
 import { useMonth } from '../../hooks/useMonth'
 import { ChoiceSheet } from '../../components/ui/ChoiceSheet'
 import { BudgetAmountInput } from './BudgetAmountInput'
-import { barColor, budgetRows, fillFromPrevious, type BudgetRowModel, type BudgetScope } from './helpers'
+import { barColor, budgetRows, fillFromPrevious, type BudgetRowModel, type BudgetScope, expenseParents } from './helpers'
 
 export default function BudgetsPage() {
   const { month, prev, next, today } = useMonth()
@@ -25,12 +25,17 @@ export default function BudgetsPage() {
 
   const summary = useMemo(() => summarizeMonth(month, txs ?? [], categories, txs ?? []), [month, txs, categories])
   const prevSummary = useMemo(() => summarizeMonth(pm, txs ?? [], categories), [pm, txs, categories])
-  const usages = useMemo(() => budgetUsage(budgets, month, summary.byCategory), [budgets, month, summary])
+  // 보관된 카테고리의 예산은 화면에 행이 없으므로 총 예산에서도 제외한다
+  const activeBudgets = useMemo(() => {
+    const ids = new Set(expenseParents(categories).map((c) => c.id))
+    return budgets.filter((b) => ids.has(b.categoryId))
+  }, [categories, budgets])
+  const usages = useMemo(() => budgetUsage(activeBudgets, month, summary.byCategory), [activeBudgets, month, summary])
   const total = useMemo(() => totalBudget(usages), [usages])
-  const rows = useMemo(() => budgetRows(categories, budgets, month, usages, summary.byCategory), [categories, budgets, month, usages, summary])
+  const rows = useMemo(() => budgetRows(categories, activeBudgets, month, usages, summary.byCategory), [categories, activeBudgets, month, usages, summary])
   const budgeted = rows.filter((r) => r.usage !== null)
   const unbudgeted = rows.filter((r) => r.usage === null)
-  const fillCandidates = useMemo(() => fillFromPrevious(categories, budgets, prevSummary.byCategory), [categories, budgets, prevSummary])
+  const fillCandidates = useMemo(() => fillFromPrevious(categories, activeBudgets, prevSummary.byCategory), [categories, activeBudgets, prevSummary])
 
   const writeMonth = scope === 'month' ? month : BUDGET_DEFAULT_MONTH
   const setBudget = (categoryId: string, amount: number) => budgetRepo.set(categoryId, writeMonth, amount)

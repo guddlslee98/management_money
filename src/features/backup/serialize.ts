@@ -2,9 +2,9 @@
  * 백업 직렬화/역직렬화 (순수 함수, 부수효과 없음).
  * JSON 백업은 db/repo.ts의 BackupData 그대로이며, 기기 종속 설정(backup.*)만 제외한다.
  */
-import { ValidationError, type BackupData } from '../../db/repo'
+import { ValidationError, type BackupData, validateTransaction } from '../../db/repo'
 import { UNCATEGORIZED, type Account, type Category, type Transaction, type TxSource, type TxType } from '../../db/types'
-import { dateKeyOf, isDateKey, type DateKey } from '../../domain/dates'
+import { dateKeyOf, isDateKey, type DateKey, toMonthKey } from '../../domain/dates'
 
 export const BACKUP_APP = 'management-money' as const
 /** 이 앱이 읽을 수 있는 최대 백업 버전 */
@@ -62,6 +62,40 @@ function validateTxRow(row: Rec, i: number): void {
   if (typeof row.amount !== 'number' || !Number.isInteger(row.amount) || row.amount < 0) throw new ValidationError(`${at}: 금액은 0 이상의 정수여야 합니다`)
 }
 
+const TX_SOURCES: TxSource[] = ['manual', 'import', 'recurring']
+const strOrNull = (v: unknown): string | null => (typeof v === 'string' && v ? v : null)
+
+/** 누락·오염된 필드를 채워 앱이 기대하는 완전한 Transaction 으로 만든다 (month 는 date 에서 재계산) */
+function normalizeTxRow(row: Rec, i: number): Transaction {
+  const type = row.type as TxType
+  const date = row.date as string
+  const tx: Transaction = {
+    id: row.id as string,
+    type,
+    date,
+    month: toMonthKey(date),
+    amount: row.amount as number,
+    categoryId: type === 'transfer' ? null : strOrNull(row.categoryId),
+    accountId: strOrNull(row.accountId),
+    toAccountId: type === 'transfer' ? strOrNull(row.toAccountId) : null,
+    payee: typeof row.payee === 'string' ? row.payee : '',
+    memo: typeof row.memo === 'string' ? row.memo : '',
+    isRefund: type !== 'transfer' && row.isRefund === true,
+    source: TX_SOURCES.includes(row.source as TxSource) ? (row.source as TxSource) : 'manual',
+    importHash: strOrNull(row.importHash),
+    recurringRuleId: strOrNull(row.recurringRuleId),
+    recurringMonth: strOrNull(row.recurringMonth),
+    createdAt: typeof row.createdAt === 'number' && Number.isFinite(row.createdAt) ? row.createdAt : Date.now(),
+    updatedAt: typeof row.updatedAt === 'number' && Number.isFinite(row.updatedAt) ? row.updatedAt : Date.now(),
+  }
+  try {
+    validateTransaction(tx)
+  } catch (e) {
+    throw new ValidationError(`거래 ${i + 1}번째 항목: ${e instanceof Error ? e.message : '올바르지 않습니다'}`)
+  }
+  return tx
+}
+
 /** 백업 JSON 텍스트를 검증해 BackupData로. 실패 시 한국어 메시지의 ValidationError */
 export function parseBackupJson(text: string): BackupData {
   let raw: unknown
@@ -82,7 +116,7 @@ export function parseBackupJson(text: string): BackupData {
     app: BACKUP_APP,
     version,
     exportedAt: typeof raw.exportedAt === 'string' ? raw.exportedAt : '',
-    transactions: transactions as unknown as Transaction[],
+    transactions: transactions.map(normalizeTxRow),
     categories: readRows(raw, 'categories', false, 'id') as unknown as BackupData['categories'],
     accounts: readRows(raw, 'accounts', false, 'id') as unknown as BackupData['accounts'],
     budgets: readRows(raw, 'budgets', false, 'id') as unknown as BackupData['budgets'],
@@ -145,8 +179,11 @@ export const UTF8_BOM = '﻿'
 
 /** RFC 4180: 쉼표·따옴표·줄바꿈이 있으면 따옴표로 감싸고 내부 따옴표는 두 번 */
 export function csvEscape(value: string | number): string {
-  const s = String(value)
-  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  let s = String(value)
+  // 엑셀이 수식으로 해석하는 선행 문자(=, +, -, @, 탭)는 작은따옴표로 무력화한다 (숫자 금액은 number 로 전달되어 영향 없음)
+  const formulaLike = typeof value === 'string' && /^[=+\-@\t\r]/.test(s)
+  if (formulaLike) s = `'${s}`
+  return formulaLike || /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
 function categoryNames(tx: Transaction, cats: Map<string, Category>): [string, string] {

@@ -113,7 +113,7 @@ export function normalizeDate(input: string | number | Date | null | undefined):
     // 엑셀 시리얼(1900 기준) 또는 epoch ms
     if (input > 20000 && input < 80000) {
       const epoch = Date.UTC(1899, 11, 30)
-      const d = new Date(epoch + Math.round(input) * 86400000)
+      const d = new Date(epoch + Math.floor(input + 1e-7) * 86400000) // 시간 소수부는 버린다(오후 시각이 다음 날로 밀리지 않게)
       return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`
     }
     if (input > 1e11) return dateKeyOf(new Date(input))

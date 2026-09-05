@@ -23,6 +23,8 @@ export const BACKUP_KEYS = {
 
 export const AUTO_BACKUP_LATEST_FILE = 'management-money-backup.json'
 export const AUTO_BACKUP_KEEP_DAYS = 7
+/** 복원 직전 스냅샷 파일명 (날짜형 백업 회전 대상에서 제외됨) */
+export const preRestoreFileName = (now: Date) => `management-money-backup-pre-restore-${now.toISOString().replace(/[:.]/g, '-')}.json`
 export const AUTO_BACKUP_DEBOUNCE_MS = 5000
 const PERMISSION_MESSAGE = '폴더 접근 권한이 필요해요. 백업·복원 화면에서 권한을 다시 요청하세요.'
 
@@ -91,7 +93,7 @@ export async function disconnectBackupDirectory(): Promise<void> {
 
 // ---------- 파일 기록 ----------
 
-async function writeTextFile(dir: FileSystemDirectoryHandle, name: string, text: string): Promise<void> {
+export async function writeTextFile(dir: FileSystemDirectoryHandle, name: string, text: string): Promise<void> {
   const fh = await dir.getFileHandle(name, { create: true })
   const w = await fh.createWritable()
   try {

@@ -39,6 +39,18 @@ describe('classify', () => {
     expect(clf.classify('동네 커피집')).toBe('food.cafe')
   })
 
+  it('requires word boundaries for short ASCII keywords', () => {
+    const c = createClassifier([r('cu|씨유', 'living.convenience', 90), r('kt', 'telecom', 100), r('pub|호프', 'food.alcohol', 50), r('coffee', 'food.cafe', 40)])
+    expect(c.classify('CU 역삼점')).toBe('living.convenience')
+    expect(c.classify('cu편의점')).toBe('living.convenience')
+    expect(c.classify('CULTURELAND')).toBeNull()
+    expect(c.classify('KIWOOM SECURITIES')).toBeNull()
+    expect(c.classify('KT 통신요금')).toBe('telecom')
+    expect(c.classify('COCKTAIL BAR')).toBeNull()
+    expect(c.classify('PUBG')).toBeNull()
+    expect(c.classify('Republic of Coffee')).toBe('food.cafe')
+  })
+
   it('searches payee and memo together and returns null when nothing matches', () => {
     expect(clf.classify('알 수 없음', '9월 급여')).toBe('income.salary')
     expect(clf.classify('알 수 없음')).toBeNull()

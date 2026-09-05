@@ -86,6 +86,16 @@ describe('DEFAULT_RULES', () => {
     }
   })
 
+  it('does not misclassify English merchant names containing short keywords as substrings', () => {
+    const clf = createClassifier(
+      DEFAULT_RULES.map((r, i) => ({ id: `d${i}`, pattern: r.pattern, categoryId: r.categoryId, priority: r.priority, source: 'default' as const, createdAt: 0 })),
+    )
+    for (const name of ['CULTURELAND', 'KIWOOM SECURITIES', 'DOCUMENT', 'COCKTAIL BAR', 'PUBG', 'DESKTOP']) {
+      const got = clf.match(name)
+      expect(got?.rule.pattern.split('|').some((k) => ['cu', 'kt', 'pub', 'skt'].includes(k.toLowerCase())), `${name} → ${got?.categoryId} via "${got?.rule.pattern}"`).toBeFalsy()
+    }
+  })
+
   it('every keyword classifies to its own category with the real classifier (longest match wins)', () => {
     const clf = createClassifier(
       DEFAULT_RULES.map((r, i) => ({ id: `d${i}`, pattern: r.pattern, categoryId: r.categoryId, priority: r.priority, source: 'default' as const, createdAt: 0 })),

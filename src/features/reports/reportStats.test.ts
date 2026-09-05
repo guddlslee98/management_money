@@ -11,7 +11,8 @@ const cats: Category[] = [
 let seq = 0
 function tx(p: Partial<Transaction> & Pick<Transaction, 'type' | 'date' | 'amount'>): Transaction {
   seq++
-  return { id: `t${seq}`, month: p.date.slice(0, 7), categoryId: null, accountId: null, toAccountId: null, payee: '', memo: '', isRefund: false, source: 'manual', importHash: null, recurringRuleId: null, createdAt: 0, updatedAt: 0, ...p }
+  return { id: `t${seq}`, month: p.date.slice(0, 7), categoryId: null, accountId: null, toAccountId: null, payee: '', memo: '', isRefund: false, source: 'manual', importHash: null, recurringRuleId: null,
+    recurringMonth: null, createdAt: 0, updatedAt: 0, ...p }
 }
 
 describe('periodLength', () => {

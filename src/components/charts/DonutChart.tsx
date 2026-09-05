@@ -34,6 +34,8 @@ export function DonutChart({ data, total, centerLabel = '총 지출', activeId, 
   const [hoverId, setHoverId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const slices = useMemo<SliceDatum[]>(() => data.filter((d) => d.value > 0).map((d) => ({ ...d, fill: d.color })), [data])
+  // 비율 분모는 실제로 그려진 조각의 합: 환불로 음수인 카테고리 때문에 100%를 넘지 않게
+  const sliceTotal = useMemo(() => slices.reduce((s, d) => s + d.value, 0), [slices])
   const currentId = activeId ?? selectedId ?? hoverId
   const active = currentId ? (slices.find((s) => s.id === currentId) ?? null) : null
 
@@ -72,7 +74,7 @@ export function DonutChart({ data, total, centerLabel = '총 지출', activeId, 
         title={s.name}
         rows={[
           { label: '금액', value: formatKRW(s.value), color: s.color },
-          { label: '비율', value: formatPct(total > 0 ? s.value / total : 0) },
+          { label: '비율', value: formatPct(sliceTotal > 0 ? s.value / sliceTotal : 0) },
         ]}
       />
     )
@@ -113,7 +115,7 @@ export function DonutChart({ data, total, centerLabel = '총 지출', activeId, 
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-12 text-center">
         <span className="max-w-full truncate text-xs text-muted">{active ? active.name : centerLabel}</span>
         <span className="tnum text-base font-bold">{formatKRW(active ? active.value : total)}</span>
-        {active && total > 0 && <span className="tnum text-xs text-muted">{formatPct(active.value / total)}</span>}
+        {active && sliceTotal > 0 && <span className="tnum text-xs text-muted">{formatPct(active.value / sliceTotal)}</span>}
       </div>
     </div>
   )

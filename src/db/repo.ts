@@ -1,4 +1,4 @@
-import { isDateKey, toMonthKey, todayKey, type DateKey, type MonthKey } from '../domain/dates'
+import { compareMonth, currentMonthKey, isDateKey, toMonthKey, todayKey, type DateKey, type MonthKey } from '../domain/dates'
 import { BUDGET_DEFAULT_MONTH } from '../domain/budget'
 import { buildRecurringTransaction, dueOccurrences } from '../domain/recurring'
 import { db, type MoneyDB } from './db'
@@ -20,8 +20,8 @@ export class ValidationError extends Error {
   }
 }
 
-export type NewTransaction = Omit<Transaction, 'id' | 'month' | 'createdAt' | 'updatedAt' | 'source' | 'importHash' | 'recurringRuleId'> &
-  Partial<Pick<Transaction, 'id' | 'source' | 'importHash' | 'recurringRuleId'>>
+export type NewTransaction = Omit<Transaction, 'id' | 'month' | 'createdAt' | 'updatedAt' | 'source' | 'importHash' | 'recurringRuleId' | 'recurringMonth'> &
+  Partial<Pick<Transaction, 'id' | 'source' | 'importHash' | 'recurringRuleId' | 'recurringMonth'>>
 
 export function validateTransaction(input: Pick<Transaction, 'type' | 'date' | 'amount' | 'accountId' | 'toAccountId'>): void {
   if (!isDateKey(input.date)) throw new ValidationError('날짜 형식이 올바르지 않습니다')
@@ -30,6 +30,15 @@ export function validateTransaction(input: Pick<Transaction, 'type' | 'date' | '
     if (!input.accountId || !input.toAccountId) throw new ValidationError('이체는 출금 계좌와 입금 계좌가 모두 필요합니다')
     if (input.accountId === input.toAccountId) throw new ValidationError('출금 계좌와 입금 계좌가 같을 수 없습니다')
   }
+}
+
+export function validateRecurringRule(rule: Pick<RecurringRule, 'type' | 'amount' | 'dayOfMonth' | 'accountId' | 'toAccountId' | 'startMonth' | 'endMonth'>): void {
+  if (!Number.isInteger(rule.amount) || rule.amount < 0) throw new ValidationError('금액은 0 이상의 정수여야 합니다')
+  if (!Number.isInteger(rule.dayOfMonth) || rule.dayOfMonth < 1 || rule.dayOfMonth > 31) throw new ValidationError('반복일은 1~31 사이여야 합니다')
+  if (!/^\d{4}-\d{2}$/.test(rule.startMonth)) throw new ValidationError('시작 월 형식이 올바르지 않습니다')
+  if (rule.endMonth !== null && (!/^\d{4}-\d{2}$/.test(rule.endMonth) || compareMonth(rule.endMonth, rule.startMonth) < 0)) throw new ValidationError('종료 월은 시작 월 이후여야 합니다')
+  if (rule.type === 'transfer' && (!rule.accountId || !rule.toAccountId || rule.accountId === rule.toAccountId))
+    throw new ValidationError('이체는 서로 다른 출금·입금 계좌가 필요합니다')
 }
 
 function buildTransaction(input: NewTransaction, now: number): Transaction {
@@ -48,6 +57,7 @@ function buildTransaction(input: NewTransaction, now: number): Transaction {
     source: input.source ?? 'manual',
     importHash: input.importHash ?? null,
     recurringRuleId: input.recurringRuleId ?? null,
+    recurringMonth: input.recurringMonth ?? null,
     createdAt: now,
     updatedAt: now,
   }
@@ -203,12 +213,14 @@ export function makeRepos(d: MoneyDB) {
     },
     /** 삭제: 소분류도 함께 삭제하고, 해당 거래는 미분류로, 예산/규칙은 제거 */
     async remove(id: string): Promise<void> {
-      await d.transaction('rw', [d.categories, d.transactions, d.budgets, d.classifyRules], async () => {
+      await d.transaction('rw', [d.categories, d.transactions, d.budgets, d.classifyRules, d.recurringRules], async () => {
         const children = await d.categories.where('parentId').equals(id).toArray()
         const ids = [id, ...children.map((c) => c.id)]
         await d.transactions.where('categoryId').anyOf(ids).modify({ categoryId: null })
         await d.budgets.where('categoryId').anyOf(ids).delete()
         await d.classifyRules.where('categoryId').anyOf(ids).delete()
+        // 반복 규칙이 사라진 카테고리로 계속 생성하지 않도록 미분류로 돌린다
+        await d.recurringRules.filter((r) => r.categoryId !== null && ids.includes(r.categoryId)).modify({ categoryId: null })
         await d.categories.bulkDelete(ids)
       })
     },
@@ -257,6 +269,8 @@ export function makeRepos(d: MoneyDB) {
         await d.recurringRules.filter((r) => r.accountId === id || r.toAccountId === id).modify((r) => {
           if (r.accountId === id) r.accountId = null
           if (r.toAccountId === id) r.toAccountId = null
+          // 이체 규칙은 상대 계좌가 없으면 유효하지 않으므로 끈다
+          if (r.type === 'transfer') r.isActive = false
         })
         await d.accounts.delete(id)
       })
@@ -292,10 +306,7 @@ export function makeRepos(d: MoneyDB) {
       return d.recurringRules.get(id)
     },
     async add(input: Omit<RecurringRule, 'id' | 'createdAt' | 'updatedAt'> & Partial<Pick<RecurringRule, 'id'>>): Promise<RecurringRule> {
-      if (!Number.isInteger(input.amount) || input.amount < 0) throw new ValidationError('금액은 0 이상의 정수여야 합니다')
-      if (!Number.isInteger(input.dayOfMonth) || input.dayOfMonth < 1 || input.dayOfMonth > 31) throw new ValidationError('반복일은 1~31 사이여야 합니다')
-      if (input.type === 'transfer' && (!input.accountId || !input.toAccountId || input.accountId === input.toAccountId))
-        throw new ValidationError('이체는 서로 다른 출금·입금 계좌가 필요합니다')
+      validateRecurringRule(input)
       const now = Date.now()
       const rule: RecurringRule = { ...input, id: input.id ?? newId(), createdAt: now, updatedAt: now }
       await d.recurringRules.add(rule)
@@ -304,7 +315,14 @@ export function makeRepos(d: MoneyDB) {
     async update(id: string, patch: Partial<Omit<RecurringRule, 'id' | 'createdAt'>>): Promise<void> {
       const cur = await d.recurringRules.get(id)
       if (!cur) throw new ValidationError('반복 규칙을 찾을 수 없습니다')
-      await d.recurringRules.update(id, { ...patch, updatedAt: Date.now() })
+      const next = { ...cur, ...patch }
+      validateRecurringRule(next)
+      // 껐다가 다시 켜면 꺼져 있던 달을 소급 생성하지 않고 이번 달부터 이어간다
+      if (patch.isActive === true && !cur.isActive) {
+        const nowMonth = currentMonthKey()
+        if (compareMonth(next.startMonth, nowMonth) < 0) next.startMonth = nowMonth
+      }
+      await d.recurringRules.put({ ...next, updatedAt: Date.now() })
     },
     /** 규칙 삭제. deleteGenerated=true면 생성된 거래도 삭제, 아니면 거래는 남기고 연결만 끊음 */
     async remove(id: string, deleteGenerated = false): Promise<void> {
@@ -324,10 +342,19 @@ export function makeRepos(d: MoneyDB) {
         for (const rule of rules) {
           if (!rule.isActive) continue
           const existing = await d.transactions.where('recurringRuleId').equals(rule.id).toArray()
-          const months = new Set(existing.map((t) => t.month))
+          // 사용자가 생성된 거래의 날짜를 다른 달로 옮겨도 발생 월(recurringMonth) 기준으로 멱등하게 판단한다
+          const months = new Set(existing.map((t) => t.recurringMonth ?? t.month))
           const due = dueOccurrences(rule, today, months)
           if (due.length === 0) continue
-          await d.transactions.bulkAdd(due.map((o) => buildRecurringTransaction(rule, o, now)))
+          const rows = due.map((o) => buildRecurringTransaction(rule, o, now))
+          try {
+            for (const row of rows) validateTransaction(row)
+          } catch {
+            // 계좌 삭제 등으로 더 이상 유효하지 않은 규칙은 끄고 건너뛴다
+            await d.recurringRules.update(rule.id, { isActive: false, updatedAt: now })
+            continue
+          }
+          await d.transactions.bulkAdd(rows)
           created += due.length
         }
         return created
@@ -423,7 +450,8 @@ export function makeRepos(d: MoneyDB) {
       if (dirHandle) await d.settings.put(dirHandle)
       await d.categories.bulkPut(data.categories ?? [])
       await d.accounts.bulkPut(data.accounts ?? [])
-      await d.transactions.bulkPut(data.transactions ?? [])
+      // month는 date에서 다시 계산해 저장한다 (백업 파일의 값이 비거나 어긋나도 월별 조회에서 빠지지 않게)
+      await d.transactions.bulkPut((data.transactions ?? []).map((t) => ({ ...t, month: toMonthKey(t.date), recurringMonth: t.recurringMonth ?? null })))
       await d.budgets.bulkPut(data.budgets ?? [])
       await d.recurringRules.bulkPut(data.recurringRules ?? [])
       await d.classifyRules.bulkPut(data.classifyRules ?? [])

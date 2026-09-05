@@ -89,8 +89,15 @@ function bucketize(txs: Iterable<Transaction>, type: 'expense' | 'income', byId:
   return buckets
 }
 
+function positiveChildTotal(b: Bucket): number {
+  let s = 0
+  for (const ch of b.children.values()) s += Math.max(0, ch.amount)
+  return s
+}
+
 function toShares(cur: Map<string, Bucket>, prev: Map<string, Bucket>): CategoryShare[] {
-  const total = [...cur.values()].reduce((s, b) => s + b.amount, 0)
+  // 비율의 분모는 양수 합계만 사용: 환불로 음수가 된 카테고리가 다른 카테고리를 100% 넘게 보이게 하지 않는다
+  const total = [...cur.values()].reduce((s, b) => s + Math.max(0, b.amount), 0)
   const ids = new Set<string>([...cur.keys()])
   const shares: CategoryShare[] = []
   for (const id of ids) {
@@ -104,7 +111,7 @@ function toShares(cur: Map<string, Bucket>, prev: Map<string, Bucket>): Category
       children.push({
         categoryId: subId,
         amount: ch.amount,
-        pct: b.amount > 0 ? ch.amount / b.amount : 0,
+        pct: positiveChildTotal(b) > 0 ? Math.max(0, ch.amount) / positiveChildTotal(b) : 0,
         prevAmount: pa,
         delta: ch.amount - pa,
         deltaPct: pa !== 0 ? (ch.amount - pa) / Math.abs(pa) : null,
@@ -116,7 +123,7 @@ function toShares(cur: Map<string, Bucket>, prev: Map<string, Bucket>): Category
     shares.push({
       categoryId: id,
       amount: b.amount,
-      pct: total > 0 ? b.amount / total : 0,
+      pct: total > 0 ? Math.max(0, b.amount) / total : 0,
       prevAmount,
       delta: b.amount - prevAmount,
       deltaPct: prevAmount !== 0 ? (b.amount - prevAmount) / Math.abs(prevAmount) : null,

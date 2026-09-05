@@ -20,6 +20,7 @@ function tx(p: Partial<Transaction>): Transaction {
     source: 'manual',
     importHash: null,
     recurringRuleId: null,
+    recurringMonth: null,
     createdAt: seq,
     updatedAt: seq,
     ...p,

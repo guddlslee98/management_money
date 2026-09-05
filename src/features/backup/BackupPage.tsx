@@ -14,6 +14,8 @@ import {
   requestBackupPermission,
   useAutoBackupStatus,
   writeBackupNow,
+  writeTextFile,
+  preRestoreFileName,
 } from '../../app/autoBackup'
 import { downloadTextFile, readFileText, reloadApp } from './browser'
 import { formatBytes, formatDateTime } from './format'
@@ -196,6 +198,11 @@ export function RestoreCard() {
     try {
       // 덮어쓰기는 settings도 비우므로 자동 백업 폴더 연결을 유지한다
       const dir = await getBackupDirectory()
+      // 복원 전 현재 데이터를 스냅샷으로 남긴다: 자동 백업 폴더가 있으면 그 폴더에, 없으면 내려받기
+      const snapshotName = preRestoreFileName(new Date())
+      const snapshot = toBackupJson(await repos.dumpAll())
+      if (dir) await writeTextFile(dir, snapshotName, snapshot).catch(() => downloadTextFile(snapshotName, snapshot, 'application/json'))
+      else downloadTextFile(snapshotName, snapshot, 'application/json')
       await repos.restoreAll(pending.data, mode)
       if (dir) await settingsRepo.set(BACKUP_KEYS.dirHandle, dir)
       setConfirmOpen(false)

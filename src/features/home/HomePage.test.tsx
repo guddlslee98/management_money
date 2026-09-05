@@ -75,7 +75,7 @@ describe('HomePage', () => {
     renderAt('/?m=2026-09')
     expect(await screen.findByText('예산')).toBeInTheDocument()
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
-    expect(screen.getAllByRole('link', { name: '전체 보기 ›' })[0]).toHaveAttribute('href', '/budgets')
+    expect(screen.getAllByRole('link', { name: '전체 보기 ›' })[0]).toHaveAttribute('href', '/budgets?m=2026-09')
   })
 
   it('shows the empty state for a month without transactions', async () => {

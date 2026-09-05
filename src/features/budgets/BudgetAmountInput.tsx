@@ -9,6 +9,7 @@ import { amountToInput, formatAmountInput, parseAmountInput } from './helpers'
 export function BudgetAmountInput({ value, label, placeholder = '없음', className, onCommit }: { value: number; label: string; placeholder?: string; className?: string; onCommit: (amount: number) => void | Promise<void> }) {
   const [text, setText] = useState(() => amountToInput(value))
   const focused = useRef(false)
+  const cancelled = useRef(false)
 
   useEffect(() => {
     if (!focused.current) setText(amountToInput(value))
@@ -25,6 +26,8 @@ export function BudgetAmountInput({ value, label, placeholder = '없음', classN
       e.preventDefault()
       e.currentTarget.blur()
     } else if (e.key === 'Escape') {
+      // blur 가 setText 반영 전에 동기적으로 발생하므로, 취소 플래그로 onBlur 의 저장을 막는다
+      cancelled.current = true
       setText(amountToInput(value))
       e.currentTarget.blur()
     }
@@ -48,6 +51,11 @@ export function BudgetAmountInput({ value, label, placeholder = '없음', classN
         }}
         onBlur={() => {
           focused.current = false
+          if (cancelled.current) {
+            cancelled.current = false
+            setText(amountToInput(value))
+            return
+          }
           void commit()
         }}
         onKeyDown={onKeyDown}

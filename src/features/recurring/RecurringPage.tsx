@@ -66,7 +66,7 @@ export default function RecurringPage() {
           <ul className="text-sm space-y-1 list-disc pl-4">
             <li>발생일이 지나면 앱을 열 때 자동으로 거래가 등록됩니다.</li>
             <li>미래 거래는 미리 만들지 않습니다. 발생일 당일 이후에 생성됩니다.</li>
-            <li>규칙을 끄면(비활성) 그 이후 발생분은 만들지 않습니다.</li>
+            <li>규칙을 끄면(비활성) 그 이후 발생분은 만들지 않습니다. 다시 켜면 꺼져 있던 달은 건너뛰고 이번 달부터 이어갑니다.</li>
           </ul>
           <div className="mt-3 flex items-center gap-3">
             <Button variant="secondary" size="sm" onClick={generateNow} disabled={generating}>

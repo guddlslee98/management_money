@@ -42,6 +42,7 @@ describe('dates', () => {
     expect(normalizeDate('2026-09-05 13:20:11')).toBe('2026-09-05')
     expect(normalizeDate('26.09.05')).toBe('2026-09-05')
     expect(normalizeDate(45905)).toBe('2025-09-05') // 엑셀 시리얼
+    expect(normalizeDate(45905.75)).toBe('2025-09-05') // 시각 포함 시리얼도 같은 날
     expect(normalizeDate('')).toBeNull()
     expect(normalizeDate('hello')).toBeNull()
     expect(normalizeDate('2026-02-30')).toBeNull()
