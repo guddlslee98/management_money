@@ -74,16 +74,25 @@ expect_text "계좌 관리" "더보기 메뉴 렌더링"
 agent-browser screenshot "$OUT/02-more.png"
 
 echo "3) dev 훅으로 샘플 데이터 시딩 (window.__mm, import.meta.env.DEV 전용)"
+# 전체 초기화 → 새로고침(부트스트랩이 기본 카테고리·분류 규칙·계좌를 다시 시딩) → 샘플 거래 생성
+agent-browser eval --stdin <<'JS' >/dev/null
+(async () => { await __mm.clearAll(); return true })()
+JS
+agent-browser reload
+agent-browser wait --text "계좌 관리"
 COUNT="$(agent-browser eval --stdin <<'JS' | tr -dc '0-9'
 (async () => {
-  await __mm.clearAll();
   await __mm.seedSample({ months: 2 });
   return await __mm.repos.transactions.count();
 })()
 JS
 )"
 if [ "${COUNT:-0}" -gt 0 ]; then ok "샘플 거래 ${COUNT}건 저장됨 (IndexedDB)"; else fail "샘플 거래가 저장되지 않음 (count=${COUNT:-?})"; fi
-
+RULES="$(agent-browser eval --stdin <<'JS' | tr -dc '0-9'
+(async () => await __mm.repos.classifyRules.all().then((r) => r.length))()
+JS
+)"
+if [ "${RULES:-0}" -gt 100 ]; then ok "기본 분류 규칙 ${RULES}개 시딩됨"; else fail "기본 분류 규칙이 없음 (count=${RULES:-?})"; fi
 echo "4) 홈 복귀 + 페이지 JS 오류 확인"
 agent-browser find role link click --name "홈"
 agent-browser wait --url "$BASE/"
@@ -102,4 +111,42 @@ agent-browser screenshot "$OUT/03-home-seeded.png"
 # agent-browser wait --url "**/transactions"
 # expect_text "smoke-test" "저장한 거래가 목록에 표시"
 
+echo "5) 거래 입력 → 저장 → 목록 확인"
+agent-browser open "$BASE/transactions/new"
+agent-browser wait --text "거래 추가"
+agent-browser find label "금액" fill "12000"
+agent-browser find label "거래처" fill "스타벅스 강남점"
+agent-browser find label "메모" fill "smoke-test"
+# 거래처 키워드로 카테고리 추천 칩이 뜨면 적용한다 (규칙: 스타벅스 → 카페)
+if agent-browser get text body | grep -qF "추천"; then
+  agent-browser find role button click --name "적용"
+  ok "거래처 키워드로 카테고리 추천·적용"
+else
+  fail "카테고리 추천 칩이 표시되지 않음"
+fi
+agent-browser screenshot "$OUT/04-form-filled.png"
+agent-browser find role button click --name "저장"
+agent-browser wait --url "**/transactions*"
+agent-browser wait --text "스타벅스 강남점"
+expect_text "스타벅스 강남점" "저장한 거래가 목록에 표시"
+expect_text "-₩12,000" "지출 금액이 음수 빨간색 표기로 표시"
+agent-browser screenshot "$OUT/05-transactions.png"
+SAVED="$(agent-browser eval --stdin <<'JS' | tr -dc '0-9'
+(async () => (await __mm.repos.transactions.search("smoke-test")).length)()
+JS
+)"
+if [ "${SAVED:-0}" -eq 1 ]; then ok "IndexedDB에 거래 1건 저장 확인"; else fail "저장된 거래를 찾지 못함 (count=${SAVED:-?})"; fi
+echo "6) 리포트 화면"
+agent-browser open "$BASE/reports"
+agent-browser wait --text "리포트"
+expect_text "12개월" "기간 선택 렌더링"
+expect_text "평균" "월별 표(평균 행) 렌더링"
+agent-browser screenshot "$OUT/06-reports.png"
+echo "7) 예산 화면"
+agent-browser open "$BASE/budgets"
+agent-browser wait --text "예산"
+expect_text "총 예산" "예산 요약 카드 렌더링"
+agent-browser screenshot "$OUT/07-budgets.png"
+echo "8) 페이지 JS 오류 재확인"
+if agent-browser errors --json | grep -qF '"errors":[]'; then ok "페이지 JS 오류 없음 (전체 시나리오)"; else agent-browser errors > "$OUT/errors.log"; fail "페이지 JS 오류 발생 ($OUT/errors.log)"; fi
 echo "스모크 테스트 통과 ($PASS 검사) — 산출물: $OUT/"
