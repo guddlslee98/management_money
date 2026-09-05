@@ -8,7 +8,7 @@ import { currentMonthKey, formatDateKo, formatMonthKo, todayKey } from '../../do
 import { nextOccurrence } from '../../domain/recurring'
 import { useAccountMap, useAccounts, useCategories, useCategoryMap, useRecurringRules } from '../../hooks/data'
 import { cn } from '../../lib/cn'
-import { ChoiceSheet } from './ChoiceSheet'
+import { ChoiceSheet } from '../../components/ui/ChoiceSheet'
 import { RecurringForm } from './RecurringForm'
 import { accountName, describeDay, TYPE_LABEL, TYPE_TEXT_CLASS } from './helpers'
 

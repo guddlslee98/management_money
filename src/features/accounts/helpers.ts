@@ -1,6 +1,6 @@
 import { ValidationError } from '../../db/repo'
 import type { Account, AccountType, Transaction } from '../../db/types'
-import { parseAmountInput } from '../budgets/helpers'
+import { parseAmountInput } from '../../lib/amountInput'
 
 export const ACCOUNT_TYPES: Array<{ value: AccountType; label: string; emoji: string }> = [
   { value: 'cash', label: '현금', emoji: '💵' },

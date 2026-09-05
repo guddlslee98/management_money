@@ -10,7 +10,7 @@ import {
 import { recurringRepo, ValidationError } from "../../db/repo";
 import type { Account, Category, RecurringRule, TxType } from "../../db/types";
 import type { MonthKey } from "../../domain/dates";
-import { formatAmountInput } from "../budgets/helpers";
+import { formatAmountInput } from '../../lib/amountInput'
 import {
   emptyRuleForm,
   formToRuleInput,

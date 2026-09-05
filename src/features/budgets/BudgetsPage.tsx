@@ -8,7 +8,7 @@ import { formatKRW, formatPct } from '../../domain/money'
 import { summarizeMonth } from '../../domain/summary'
 import { useBudgets, useCategories, useTransactionsInMonths } from '../../hooks/data'
 import { useMonth } from '../../hooks/useMonth'
-import { ChoiceSheet } from '../recurring/ChoiceSheet'
+import { ChoiceSheet } from '../../components/ui/ChoiceSheet'
 import { BudgetAmountInput } from './BudgetAmountInput'
 import { barColor, budgetRows, fillFromPrevious, type BudgetRowModel, type BudgetScope } from './helpers'
 

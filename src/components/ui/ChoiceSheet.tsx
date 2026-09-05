@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Button, Sheet } from '../../components/ui'
+import { Button, Sheet } from './index'
 
 export interface Choice {
   label: string

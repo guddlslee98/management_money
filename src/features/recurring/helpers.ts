@@ -1,7 +1,7 @@
 import { ValidationError } from '../../db/repo'
 import type { Account, Category, CategoryKind, RecurringRule, TxType } from '../../db/types'
 import { isMonthKey, type MonthKey } from '../../domain/dates'
-import { parseAmountInput } from '../budgets/helpers'
+import { parseAmountInput } from '../../lib/amountInput'
 
 export interface CategoryGroup {
   parent: Category

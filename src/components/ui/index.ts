@@ -1,5 +1,6 @@
 export { Button } from './Button'
 export { Card, CardTitle } from './Card'
+export { ChoiceSheet } from './ChoiceSheet'
 export { CategoryBadge } from './CategoryBadge'
 export { EmptyState } from './EmptyState'
 export { Field, Input, Label, Select, Textarea } from './Field'

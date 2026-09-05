@@ -3,7 +3,7 @@ import { Button, Field, Input, Select, Sheet } from "../../components/ui";
 import { accountRepo, ValidationError } from "../../db/repo";
 import type { Account, AccountType } from "../../db/types";
 import { cn } from "../../lib/cn";
-import { formatAmountInput } from "../budgets/helpers";
+import { formatAmountInput } from '../../lib/amountInput'
 import {
   ACCOUNT_COLORS,
   ACCOUNT_TYPES,
