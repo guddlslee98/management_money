@@ -55,7 +55,7 @@ describe('TransactionsPage', () => {
     expect(within(day).getByText('+₩10,000')).toBeInTheDocument()
     expect(within(day).getByText('환불')).toBeInTheDocument()
     expect(screen.getByText('+₩3,000,000')).toBeInTheDocument()
-    expect(screen.getByText('이체 · 은행 계좌 → 신용카드')).toBeInTheDocument()
+    expect(await screen.findByText('이체 · 은행 계좌 → 신용카드')).toBeInTheDocument() // 계좌 이름은 별도 라이브 쿼리로 로드
     expect(screen.getByRole('link', { name: '거래 추가' })).toHaveAttribute('href', '/transactions/new?m=2026-09')
   })
 

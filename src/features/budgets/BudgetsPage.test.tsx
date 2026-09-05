@@ -50,8 +50,9 @@ describe('BudgetsPage', () => {
     await budgetRepo.set('food', '*', 300_000)
     renderPage()
     fireEvent.click(await screen.findByRole('tab', { name: '2026년 9월만' }))
-    const input = await screen.findByLabelText('식비 예산')
-    expect((input as HTMLInputElement).placeholder).toBe('기본 ₩300,000')
+    // 예산이 로드되면 행이 '예산 있는 카테고리' 카드로 옮겨져 입력 요소가 교체되므로, 로드 완료 후의 요소를 잡는다
+    const input = (await screen.findByPlaceholderText('기본 ₩300,000')) as HTMLInputElement
+    expect(input).toHaveAccessibleName('식비 예산')
     fireEvent.change(input, { target: { value: '200,000' } })
     fireEvent.keyDown(input, { key: 'Enter' })
     fireEvent.blur(input)

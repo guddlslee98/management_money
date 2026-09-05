@@ -29,9 +29,10 @@ describe('RecurringPage', () => {
 
     fireEvent.change(await screen.findByLabelText('금액'), { target: { value: '650000' } })
     const cat = screen.getByLabelText('카테고리') as HTMLSelectElement
-    expect(cat.querySelector('optgroup')?.getAttribute('label')).toBe('🏠 주거')
+    await waitFor(() => expect(cat.querySelector('optgroup')?.getAttribute('label')).toBe('🏠 주거')) // 카테고리 로드 대기
     expect(Array.from(cat.options).some((o) => o.value === 'salary')).toBe(false) // 지출 폼에는 수입 카테고리 없음
     fireEvent.change(cat, { target: { value: 'housing.rent' } })
+    await screen.findByRole('option', { name: /은행 계좌/ }) // 계좌 로드 대기
     fireEvent.change(screen.getByLabelText('계좌'), { target: { value: 'acc.bank' } })
     fireEvent.change(screen.getByLabelText('거래처'), { target: { value: '월세' } })
     fireEvent.change(screen.getByLabelText(/반복일/), { target: { value: '1' } })
