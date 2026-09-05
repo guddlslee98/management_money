@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { Route, Routes } from 'react-router'
+import { startAutoBackup } from './app/autoBackup'
 import { bootstrap } from './app/bootstrap'
+import { PwaUpdatePrompt } from './app/pwa'
 import { AppLayout } from './components/layout/AppLayout'
 import AccountsPage from './features/accounts/AccountsPage'
 import BackupPage from './features/backup/BackupPage'
@@ -17,27 +19,30 @@ import TransactionsPage from './features/transactions/TransactionsPage'
 
 export default function App() {
   useEffect(() => {
-    void bootstrap()
+    void bootstrap().then(() => startAutoBackup())
   }, [])
 
   return (
-    <Routes>
-      <Route element={<AppLayout />}>
-        <Route index element={<HomePage />} />
-        <Route path="transactions" element={<TransactionsPage />} />
-        <Route path="transactions/new" element={<TransactionFormPage />} />
-        <Route path="transactions/:id" element={<TransactionFormPage />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="budgets" element={<BudgetsPage />} />
-        <Route path="more" element={<MorePage />} />
-        <Route path="more/accounts" element={<AccountsPage />} />
-        <Route path="more/categories" element={<CategoriesPage />} />
-        <Route path="more/recurring" element={<RecurringPage />} />
-        <Route path="more/import" element={<ImportPage />} />
-        <Route path="more/backup" element={<BackupPage />} />
-        <Route path="more/settings" element={<SettingsPage />} />
-        <Route path="*" element={<HomePage />} />
-      </Route>
-    </Routes>
+    <>
+      <PwaUpdatePrompt />
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="transactions" element={<TransactionsPage />} />
+          <Route path="transactions/new" element={<TransactionFormPage />} />
+          <Route path="transactions/:id" element={<TransactionFormPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="budgets" element={<BudgetsPage />} />
+          <Route path="more" element={<MorePage />} />
+          <Route path="more/accounts" element={<AccountsPage />} />
+          <Route path="more/categories" element={<CategoriesPage />} />
+          <Route path="more/recurring" element={<RecurringPage />} />
+          <Route path="more/import" element={<ImportPage />} />
+          <Route path="more/backup" element={<BackupPage />} />
+          <Route path="more/settings" element={<SettingsPage />} />
+          <Route path="*" element={<HomePage />} />
+        </Route>
+      </Routes>
+    </>
   )
 }
