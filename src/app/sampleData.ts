@@ -1,4 +1,4 @@
-import { repos, type Repos } from '../db/repo'
+import { repos, type NewTransaction, type Repos } from '../db/repo'
 import type { Category, TxType } from '../db/types'
 import { addMonths, currentMonthKey, dateInMonth, daysInMonth, todayKey } from '../domain/dates'
 
@@ -106,7 +106,7 @@ export async function seedSampleData(opts: SampleOptions = {}): Promise<{ transa
   const subCat = byName(['구독', 'OTT·구독', '구독·멤버십', '문화·여가'], 'expense')
 
   const cur = currentMonthKey()
-  const rows = []
+  const rows: NewTransaction[] = []
   for (let i = months - 1; i >= 0; i--) {
     const m = addMonths(cur, -i)
     const dim = daysInMonth(m)
