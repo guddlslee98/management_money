@@ -11,6 +11,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  administration: write # Pages를 처음 켜려면 필요 (configure-pages의 enablement: true)
 
 concurrency:
   group: pages
@@ -54,6 +55,8 @@ jobs:
     steps:
       - name: Configure Pages (enables Pages for the repo on first run)
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Deploy to GitHub Pages
         id: deployment
