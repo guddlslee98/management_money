@@ -3,8 +3,13 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// GitHub Pages는 프로젝트 저장소를 하위 경로(/management_money/)에서 서빙한다.
+// 다른 정적 호스팅(Vercel/Netlify 등, 루트 경로)에 배포할 때는 VITE_BASE_PATH를 비워 두면 '/'를 쓴다.
+const base = process.env.VITE_BASE_PATH || '/'
+
 // https://vite.dev/config/
 export default defineConfig({
+  base,
   plugins: [
     react(),
     tailwindcss(),
@@ -16,8 +21,8 @@ export default defineConfig({
         short_name: '가계부',
         description: '월별 수입·지출·순수입과 카테고리별 지출 비율을 한눈에 보는 로컬 우선 가계부',
         lang: 'ko',
-        start_url: '/',
-        scope: '/',
+        start_url: base,
+        scope: base,
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#f7f7f8',
@@ -30,7 +35,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        navigateFallback: '/index.html',
+        navigateFallback: `${base}index.html`,
       },
     }),
   ],
