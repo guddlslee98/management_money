@@ -145,6 +145,8 @@ npm run build                  # dist/ → HTTPS 정적 호스팅에 배포하�
 - 자동 백업 폴더는 Chromium 데스크톱 전용(File System Access API).
 - 조사 결과의 교차 검증(반박 단계)은 세션 사용량 한도로 실행하지 못했습니다(출처는 문서에 기록).
 - 향후 옵션: Android 알림 파싱 컴패니언 앱, 이메일 첨부 자동 수집, 달력 뷰, 고정지출 뷰.
+- **보류 중:** 2인 로그인 + 실시간 동기화(공용 가계부). 결정 사항과 착수 체크리스트는
+  [`docs/SHARED_LEDGER_PLAN.md`](SHARED_LEDGER_PLAN.md) 참고 — 사용자가 다시 언급하면 그 문서대로 바로 진행.
 
 ## 12. 작업 기록
 
