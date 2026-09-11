@@ -1,5 +1,8 @@
 # 가계부 (management_money)
 
+### 🔗 바로 쓰기: **https://guddlslee98.github.io/management_money/**
+로그인이나 설치 없이 링크만 열면 됩니다. 모바일에서는 "홈 화면에 추가"로 앱처럼 설치할 수 있습니다.
+
 월별 **수입·지출·순수입**과 **카테고리별 지출 비율**을 한눈에 보는 로컬 우선(local-first) 가계부 PWA입니다.
 서버가 없고 모든 데이터는 내 기기(브라우저 IndexedDB)에만 저장됩니다. JSON 백업으로 내보내고, 동기화 폴더(Google Drive·iCloud 등)에 자동 백업해 다른 기기로 옮길 수 있습니다.
 
